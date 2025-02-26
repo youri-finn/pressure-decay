@@ -4,8 +4,6 @@ from CoolProp.CoolProp import PropsSI
 import matplotlib
 import matplotlib.pyplot as plt
 import io
-import os
-from datetime import datetime
 
 matplotlib.use('Agg')
 
