@@ -15,20 +15,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-# def parse_simex_date(date_series):
-#     return pd.to_datetime(date_series, format="%d/%m/%Y %H:%M:%S")
-#
-# def parse_xls_date(date_series):
-#     date_series = date_series.apply(lambda t: 86400 * t - 2209161600)
-#     return pd.to_datetime(date_series, unit='s')
-#
-# def parse_unix_date(date_series):
-#     return pd.to_datetime(date_series, unit='s')
-#
-# def parse_custom_date(date_series, custom_format):
-#     return pd.to_datetime(date_series, format=custom_format)
-#
-
 
 def parse_date_format(date_series, format_type, custom_format=None):
 
@@ -90,8 +76,6 @@ def volume_conversion(unit):
         'gr': lambda v: v / 1000
     }
 
-    #if unit not in ['m3', 'liter']:
-    #   raise Exception('input functionality for mass not yet developed in the backend')
     if unit in conversions:
         return conversions[unit]
     else:
@@ -102,8 +86,9 @@ def compute_density(row):
 
     try:
         return PropsSI('D', 'T', row.temperature + 273.15, 'P', row.pressure*1e5, 'CO2')
-    except:
+    except Exception:
         return np.nan
+
 
 def compute_volume(df, mass):
     pt = df.loc[df.pt.idxmax(), 'pt_trend']
@@ -113,14 +98,18 @@ def compute_volume(df, mass):
 
     return mass/density
 
+
 def gas_rate(slope, volume):
     return round(-slope * 100000 * volume * 44.009 * 24 * 365.25 / 8.3145)
+
 
 def mass_rate(slope):
     return round(-slope * 24 * 365.25 * 1000)
 
+
 def bubble_rate(slope, density):
     return round((-slope * 3/4 / density / np.pi)**(1/3) * 1000, 1)
+
 
 def analyze_data(file, params):
 
@@ -149,8 +138,13 @@ def analyze_data(file, params):
 
     # start and end time rows
     new_rows = pd.DataFrame([
-        {'date': params['start_time'], 'pressure': df[df.date <= params['start_time']].iloc[-1]['pressure'], 'temperature': df[df.date <= params['start_time']].iloc[-1]['temperature']},
-        {'date': params['end_time'], 'pressure': df[df.date <= params['end_time']].iloc[-1]['pressure'], 'temperature': df[df.date <= params['end_time']].iloc[-1]['temperature']}
+        {'date': params['start_time'],
+         'pressure': df[df.date <= params['start_time']].iloc[-1]['pressure'],
+         'temperature': df[df.date <= params['start_time']].iloc[-1]['temperature']},
+
+        {'date': params['end_time'],
+         'pressure': df[df.date <= params['end_time']].iloc[-1]['pressure'],
+         'temperature': df[df.date <= params['end_time']].iloc[-1]['temperature']}
     ])
 
     # slicing data between user start and end time
@@ -170,6 +164,8 @@ def analyze_data(file, params):
     df.pressure = pressure_conversion(params['unit_pressure'])(df.pressure)
     df.temperature = temperature_conversion(params['unit_temperature'])(df.temperature)
 
+    mass, volume = None, None
+
     # unit conversions for either mass or volume
     if mass_input:
         mass = volume_conversion(params['unit_volume'])(params['volume'])
@@ -181,7 +177,7 @@ def analyze_data(file, params):
     df['density'] = df.apply(compute_density, axis=1)
     df = df.dropna()
 
-    min_period = 24 # hours
+    min_period = 24  # hours
     max_time = df.time.iloc[-1]
 
     # counting for 24 hour increments from end
@@ -196,7 +192,8 @@ def analyze_data(file, params):
         try:
             volume = compute_volume(df, mass)
         except Exception:
-            raise Exception('something went wrong with the volume calculation from the input mass, try estimating the system volume')
+            raise Exception('something went wrong with the volume calculation from the input mass, '
+                            'try estimating the system volume')
         system_volume = round(volume*1000, 1)
     else:
         system_volume = ''
@@ -208,14 +205,13 @@ def analyze_data(file, params):
     slope_mass, intercept_mass = np.polyfit(df.time[df.day_count > 0], df.mass[df.day_count > 0], 1)
     df['mass_trend'] = np.poly1d([slope_mass, intercept_mass])(df.time)
 
-    print(df.mass)
-
-    output = gas_rate(slope_pt, volume), mass_rate(slope_mass), bubble_rate(slope_mass, df.density.mean()), system_volume
+    output = gas_rate(slope_pt, volume), mass_rate(slope_mass), \
+        bubble_rate(slope_mass, df.density.mean()), system_volume
 
     return df, output
 
 
-def generate_plot(df, params):
+def generate_plot(df):
 
     fig, ax = plt.subplots(3, 1, figsize=(10, 13), sharex=True)
 
@@ -260,5 +256,3 @@ def generate_plot(df, params):
     plt.close()
 
     return img
-
-

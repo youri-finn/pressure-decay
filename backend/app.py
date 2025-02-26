@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, session, send_file, flash, url_for, redirect
+from flask import Flask, request, render_template, session, send_file
 from datetime import datetime
 from analysis import analyze_data, generate_plot
 import os
@@ -53,9 +53,9 @@ def get_plot():
 
     # we can edit this only to use dataframe for the time axis (maybe not even)
     df = pd.read_csv(session['df_path'])
-    params = format_inputs(session['params'])
+    # params = format_inputs(session['params'])
 
-    img = generate_plot(df, params)
+    img = generate_plot(df)
     return send_file(img, mimetype='image/png')
 
 
