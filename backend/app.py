@@ -13,7 +13,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/')
 def index():
-    return render_template('index.html', file_name=None, params=None, leak_rate=None, errors=None)
+    return render_template('index.html', file_name=None, params=None, output=None, errors=None)
 
 
 @app.route('/analysis', methods=['POST'])
