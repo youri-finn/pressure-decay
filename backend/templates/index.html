@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Pressure Decay Tests</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Welcome to the Pressure Decay Test Upload & Analysis Site</h1>
+    <p>currently works for decay tests with carbon dioxide</p>
+
+        <h2>Upload a file!</h2>
+
+        <form action="/analysis" method="POST" enctype="multipart/form-data">
+            <label> Enter system name:</label>
+            <input type="text" name="system_name" placeholder="system name" value="{{ params.system_name if params else '' }}" required>
+
+            <label> Enter column numbers for 'date', 'pressure' and 'temperature' in the data file and their respective format and units:</label>
+            <div class="form-row-top">
+            <input type="number" name="col_date" min="1" placeholder="date" value="{{ params.col_date if params else '' }}" required>
+            <input type="number" name="col_pressure" min="1" placeholder="pressure" value="{{ params.col_pressure if params else '' }}" required>
+            <input type="number" name="col_temperature" min="1" placeholder="temperature" value="{{ params.col_temperature if params else '' }}" required>
+            </div>
+
+            <div class="form-row">
+
+                {% set simex_select = "selected" if params.format_date == "simex" else "" %}
+                {% set xls_select = "selected" if params.format_date == "xls" else "" %}
+                {% set unix_select = "selected" if params.format_date == "unix" else "" %}
+                {% set custom_select = "selected" if params.format_date == "custom" else "" %}
+
+            <select name="format_date" id="format_date" required oninput="document.getElementById('custom_format_container').style.display = (this.value === 'custom') ? 'block' : 'none'">
+                <option value="simex" {{ simex_select }}>simex</option>
+                <option value="xls" {{ xls_select }}>xls</option>
+                <option value="unix" {{ unix_select }}>unix</option>
+                <option value="custom" {{ custom_select }}>custom</option>
+            </select>
+
+                {% set ba_select = "selected" if params.unit_pressure == "bara" else "" %}
+                {% set bg_select = "selected" if params.unit_pressure == "barg" else "" %}
+                {% set pa_select = "selected" if params.unit_pressure == "Pa" else "" %}
+                {% set kpa_select = "selected" if params.unit_pressure == "kPa" else "" %}
+                {% set psi_select = "selected" if params.unit_pressure == "psi" else "" %}
+
+            <select name="unit_pressure" required>
+                <option value="bara" {{ ba_select }}>bara</option>
+                <option value="barg" {{ bg_select }}>barg</option>
+                <option value="Pa" {{ pa_select }}>Pa</option>
+                <option value="kPa" {{ kpa_select }}>kPa</option>
+                <option value="psi" {{ psi_select }}>psi</option>
+            </select>
+
+                {% set c_select = "selected" if params.unit_temperature == "C" else "" %}
+                {% set k_select = "selected" if params.unit_temperature == "K" else "" %}
+                {% set f_select = "selected" if params.unit_temperature == "F" else "" %}
+
+            <select name="unit_temperature" required>
+                <option value="C" {{ c_select }}>celsius</option>
+                <option value="K" {{ k_select }} >kelvin</option>
+                <option value="F" {{ f_select }}>fahrenheit</option>
+            </select>
+            </div>
+
+            <div id="custom_format_container" style="display {% if params.format_date == 'custom' %}block{% else %}none{% endif %};">
+                <label>Custom date string format:</label>
+                <input type="text" name="custom_format" placeholder="%d/%m/%Y %H:%M:%S"
+                    value="{{ params.custom_format if params else '' }}">
+            </div>
+
+            <label for="volume"> Enter either the system volume, or the amount of filled mass:<br> <small>(volume input is preferable, mass input might not always be accurate)</small></label>
+            <div class="form-row-double">
+            <input type="number" id="volume" name="volume" step="0.01" min="0" placeholder="volume or mass" value="{{ params.volume if params else '' }}" >
+
+                    {% set l_select = "selected" if params.unit_volume == "liter" else "" %}
+                    {% set m3_select = "selected" if params.unit_volume == "m3" else "" %}
+                    {% set kg_select = "selected" if params.unit_volume == "kg" else "" %}
+                    {% set g_select = "selected" if params.unit_volume == "gr" else "" %}
+
+            <select name="unit_volume" required>
+                <option value="liter" {{ l_select }}>litre</option>
+                <option value="m3" {{ m3_select }}>m^3</option>
+                <option value="kg" {{ kg_select }}>kilogram</option>
+                <option value="gr" {{ g_select }}>grams</option>
+            </select>
+            </div>
+
+            <label for="start_time">Enter the start and end time for leak rate analysis: <br> <small>(if you want to cut or shorten the uploaded data)</small></label>
+            <input type="datetime-local" id="start_time" name="start_time" value="{{ params.start_time if params else '' }}" >
+            <input type="datetime-local" id="end_time" name="end_time" value="{{ params.end_time if params else '' }}" >
+
+            <label for="file"> Submit data:</label>
+            <input type="file" id="file" name="file" accept=".csv, .xls, .xlsx" required>
+
+            <button type="submit">Analyze!</button>
+
+        </form>
+
+    {% if errors %}
+        <ul>
+        <li style="color: red;">{{ errors }}</li>
+        </ul>
+    {% endif %}
+
+    {% if output is not none %}
+        <div class="result-box">
+            <p><strong> Leak Rate (refprop) :</strong> {{ output[1] }} grams/year</p>
+            <p><strong> Leak Rate (ideal gas law) :</strong> {{ output[0] }} grams/year</p>
+            <p><strong> Bubble Rate:</strong> {{ output[2] }} mm/s</p>
+            {% if output[3] != '' %}
+                <p><strong> System Volume:</strong> {{ output[3] }} litre</p>
+            {% endif %}
+        </div>
+        <h3>Pressure Decay Plots</h3>
+        <img src="{{ url_for('get_plot') }}" alt="Pressure Decay Plot">
+    {% endif %}
+
+    <script>
+    function toggleCustomField() {
+        var formatSelect = document.getElementById("format_date");
+        var customField = document.getElementById("custom_format_container");
+        customField.style.display = (formatSelect.value === "custom") ? "block" : "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", toggleCustomField);
+    document.getElementById("format_date").addEventListener("input", toggleCustomField);
+    </script>
+
+    <p>Made by Youri Penders</p>
+</body>
+</html>
