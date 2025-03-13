@@ -1,7 +1,7 @@
 
 /* General Page Styling */
 body {
-    /*font-family: Arial, sans-serif;*/
+    /*font-family: Verdana, sans-serif;*/
     background: #f8f9fa;
     color: #333;
     margin: 0;
@@ -12,7 +12,7 @@ body {
 /* Header */
 h1, h2 {
     color: #222;
-    font-weight: bold;
+    /*font-weight: bold;*/
     margin-bottom: 10px;
 }
 
@@ -65,7 +65,7 @@ form {
 
 /* Labels */
 label {
-    font-weight: bold;
+    /*font-weight: bold;*/
     font-size: 14px;
 }
 
@@ -141,5 +141,8 @@ img {
     text-align: left;
 }
 
+.result-box p {
+    margin: 5px 0; /* Reduces space between paragraphs */
+}
 
 */

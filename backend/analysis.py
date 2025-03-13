@@ -18,11 +18,12 @@ if __name__ == "__main__":
 
 def parse_date_format(date_series, format_type, custom_format=None):
 
+    print(date_series.iloc[0])
     date_formats = {
         'simex': ("%d/%m/%Y %H:%M:%S", 's'),
         'xls': (None, 's'),
         'unix': (None, 's'),
-        'custom': (custom_format, 's')
+        'custom': (custom_format, None)
     }
 
     if format_type == 'xls':
@@ -31,8 +32,11 @@ def parse_date_format(date_series, format_type, custom_format=None):
     if format_type in date_formats:
         try:
             return pd.to_datetime(date_series, format=date_formats[format_type][0], unit=date_formats[format_type][1])
-        except Exception:
-            raise Exception(f'{format_type.upper()} date format of file could not be parsed')
+        except (ValueError, TypeError):
+            try:
+                return pd.to_datetime(date_series)
+            except (ValueError, TypeError):
+                raise Exception(f'{format_type.upper()} date format of file could not be parsed')
     else:
         raise ValueError('date format not in list of available formats')
 
@@ -82,19 +86,26 @@ def volume_conversion(unit):
         raise ValueError('volume/mass unit not in list of available conversions')
 
 
-def compute_density(row):
+def compute_density(row, medium):
+
+    if medium == 'forming':
+        medium = 'nitrogen[0.95]&hydrogen[0.05]'
 
     try:
-        return PropsSI('D', 'T', row.temperature + 273.15, 'P', row.pressure*1e5, 'CO2')
+        return PropsSI('D', 'T', row.temperature + 273.15, 'P', row.pressure*1e5, medium)
     except Exception:
         return np.nan
 
 
-def compute_volume(df, mass):
+def compute_volume(df, mass, medium):
+
+    if medium == 'forming':
+        medium = 'nitrogen[0.95]&hydrogen[0.05]'
+
     pt = df.loc[df.pt.idxmax(), 'pt_trend']
     temperature = df.loc[df.pt.idxmax(), 'temperature']
 
-    density = PropsSI('D', 'T', temperature + 273.15, 'P', pt*(temperature + 273.15)*1e5, 'CO2')
+    density = PropsSI('D', 'T', temperature + 273.15, 'P', pt*(temperature + 273.15)*1e5, medium)
 
     return mass/density
 
@@ -108,7 +119,7 @@ def mass_rate(slope):
 
 
 def bubble_rate(slope, density):
-    return round((-slope * 3/4 / density / np.pi)**(1/3) * 1000, 1)
+    return round((-slope * 6 / 3600 / np.pi / density )**(1/3) * 1000, 1)
 
 
 def analyze_data(file, params):
@@ -125,26 +136,29 @@ def analyze_data(file, params):
         mass_input = True
 
     col_indices = [params['col_date'] - 1, params['col_pressure'] - 1, params['col_temperature'] - 1]
-    df = df.iloc[:, col_indices]
+    df = df.iloc[params['start_row'] - 1:, col_indices].reset_index(drop=True)
     df.columns = ['date', 'pressure', 'temperature']
 
     df.date = parse_date_format(df.date, params['format_date'], params['custom_format'])
 
-    if params['start_time'] == '':
-        params['start_time'] = df.date[0].round('min')
+    if params['start_time'] == '' or params['start_time'] < df.date.iloc[0]:
+        params['start_time'] = df.date.iloc[0].round('min')
 
-    if params['end_time'] == '':
+    if params['end_time'] == '' or params['end_time'] > df.date.iloc[-1]:
         params['end_time'] = df.date.iloc[-1].round('min')
+
+    start_time_conditional = df.date.dt.round('min') <= params['start_time']
+    end_time_conditional = df.date.dt.round('min') <= params['end_time']
 
     # start and end time rows
     new_rows = pd.DataFrame([
         {'date': params['start_time'],
-         'pressure': df[df.date <= params['start_time']].iloc[-1]['pressure'],
-         'temperature': df[df.date <= params['start_time']].iloc[-1]['temperature']},
+         'pressure': df[start_time_conditional].iloc[-1]['pressure'],
+         'temperature': df[start_time_conditional].iloc[-1]['temperature']},
 
         {'date': params['end_time'],
-         'pressure': df[df.date <= params['end_time']].iloc[-1]['pressure'],
-         'temperature': df[df.date <= params['end_time']].iloc[-1]['temperature']}
+         'pressure': df[end_time_conditional].iloc[-1]['pressure'],
+         'temperature': df[end_time_conditional].iloc[-1]['temperature']}
     ])
 
     # slicing data between user start and end time
@@ -174,8 +188,11 @@ def analyze_data(file, params):
 
     # calculations
     df['pt'] = df.apply(lambda row: row.pressure/(row.temperature + 273.15), axis=1)
-    df['density'] = df.apply(compute_density, axis=1)
+    df['density'] = df.apply(lambda x: compute_density(x, params['medium']), axis=1)
     df = df.dropna()
+
+    if len(df) == 0:
+        raise Exception('Medium is not correct for data inserted')
 
     min_period = 24  # hours
     max_time = df.time.iloc[-1]
@@ -190,7 +207,7 @@ def analyze_data(file, params):
 
     if mass_input:
         try:
-            volume = compute_volume(df, mass)
+            volume = compute_volume(df, mass, params['medium'])
         except Exception:
             raise Exception('something went wrong with the volume calculation from the input mass, '
                             'try estimating the system volume')
@@ -206,7 +223,7 @@ def analyze_data(file, params):
     df['mass_trend'] = np.poly1d([slope_mass, intercept_mass])(df.time)
 
     output = gas_rate(slope_pt, volume), mass_rate(slope_mass), \
-        bubble_rate(slope_mass, df.density.mean()), system_volume
+        bubble_rate(slope_mass, df.density.mean()), system_volume, mass_input, intercept_mass
 
     return df, output
 
@@ -215,7 +232,7 @@ def generate_plot(df):
 
     fig, ax = plt.subplots(3, 1, figsize=(10, 13), sharex=True)
 
-    ax[0].plot(df.time, df.pressure, label='System Pressure')
+    ax[0].plot(df.time, df.pressure, label='System Pressure', lw=1)
 
     for day in df.day_count.unique()[1:]:
         line = df.time[df.day_count == day].iloc[0]
@@ -225,8 +242,16 @@ def generate_plot(df):
     ax[0].set_ylabel('Pressure (bar)')
     ax[0].legend()
 
-    ax[1].plot(df.time, df.pt, label='P/T')
-    ax[1].plot(df.time[df.day_count > 0], df.pt_trend[df.day_count > 0], label='trendline', ls='--', lw=2)
+    # p/t plot
+
+    slope = (df.pt_trend.iloc[-1] - df.pt_trend.iloc[0]) / (df.time.iloc[-1] - df.time.iloc[0])
+    intercept = df.pt_trend.iloc[-1] - slope*df.time.iloc[-1]
+
+    ax[1].plot(df.time, df.pt, label='P/T', lw=1)
+    ax[1].plot(df.time[df.day_count > 0], df.pt_trend[df.day_count > 0], label=f'trendline: {slope: .2e}t +{intercept: .4f}', ls='--', lw=3)
+
+    ax2 = ax[1].twinx()
+    # ax2.plot(df.time, df.pt, c='C1', label='P/T/h')
 
     for day in df.day_count.unique()[1:]:
         line = df.time[df.day_count == day].iloc[0]
@@ -236,8 +261,13 @@ def generate_plot(df):
     ax[1].set_ylabel('P/T (bar/K)')
     ax[1].legend()
 
-    ax[2].plot(df.time, df.mass, label='System Mass')
-    ax[2].plot(df.time[df.day_count > 0], df.mass_trend[df.day_count > 0], label='trendline', ls='--', lw=2)
+    # mass plot
+
+    slope = (df.mass_trend.iloc[-1] - df.mass_trend.iloc[0]) / (df.time.iloc[-1] - df.time.iloc[0])
+    intercept = df.mass_trend.iloc[-1] - slope*df.time.iloc[-1]
+
+    ax[2].plot(df.time, df.mass, label='System Mass', lw=1)
+    ax[2].plot(df.time[df.day_count > 0], df.mass_trend[df.day_count > 0], label=f'trendline: {slope: .2e}t +{intercept: .3f}', ls='--', lw=3)
 
     for day in df.day_count.unique()[1:]:
         line = df.time[df.day_count == day].iloc[0]
