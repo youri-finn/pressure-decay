@@ -1,3 +1,6 @@
 __pycache__/
 tempfiles/
 output.txt
+backend/assets/changed_report.docx
+backend/assets/img.png
+.idea/

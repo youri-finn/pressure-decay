@@ -1,9 +1,17 @@
 from docx import Document
 from datetime import datetime
+import os
 
 def export_word(params, output, image):
 
-    doc = Document('assets/report_template.docx')
+    template_path = '/opt/app-root/src/backend/assets/report_template.docx'
+
+    if os.path.exists(template_path):
+        doc = Document(template_path)
+    else:
+        raise FileNotFoundError(f"Template not found at {template_path}")
+
+    # doc = Document('assets/report_template.docx')
 
     if output[4]:
         volume = output[3]

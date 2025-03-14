@@ -34,11 +34,11 @@ def upload_file():
     else:
         return render_template('index.html', file_name=None, params=params, output=None, errors=result)
 
-    df, output = analyze_data(file_path, params)
-    # try:
-    #     df, output = analyze_data(file_path, params)
-    # except Exception as exp:
-    #     return render_template('general_error.html', file_name=None, params=params, output=None, errors=exp)
+    # df, output = analyze_data(file_path, params)
+    try:
+        df, output = analyze_data(file_path, params)
+    except Exception as exp:
+        return render_template('general_error.html', file_name=None, params=params, output=None, errors=exp)
 
     df_csv_path = os.path.join(UPLOAD_FOLDER, 'df.csv')
     df.to_csv(df_csv_path, index=False)
@@ -48,7 +48,7 @@ def upload_file():
     session['df_path'] = df_csv_path
     session['output'] = output
 
-    print(params, output)
+    # print(params, output)
 
     return render_template('index.html', file_name=file_path, params=params, output=output)
 
@@ -153,7 +153,7 @@ def get_shape(file_path):
 
     elif file_path.endswith(('xls', 'xlsx')):
         line = pd.read_excel(file_path)
-    print(line.shape)
+    # print(line.shape)
     return line.shape
 
 

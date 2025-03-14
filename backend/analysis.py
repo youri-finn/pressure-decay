@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
 def parse_date_format(date_series, format_type, custom_format=None):
 
-    print(date_series.iloc[0])
+    #print(date_series.iloc[0])
     date_formats = {
         'simex': ("%d/%m/%Y %H:%M:%S", 's'),
         'xls': (None, 's'),
