@@ -20,7 +20,8 @@ def parse_date_format(date_series, format_type, custom_format=None):
 
     #print(date_series.iloc[0])
     date_formats = {
-        'simex': ("%d/%m/%Y %H:%M:%S", 's'),
+        'simex': ("%d/%m/%Y %H:%M:%S", None),
+        'scada': ("%Y/%m/%d %H:%M:%S.%f", None),
         'xls': (None, 's'),
         'unix': (None, 's'),
         'custom': (custom_format, None)
@@ -140,6 +141,12 @@ def analyze_data(file, params):
     df.columns = ['date', 'pressure', 'temperature']
 
     df.date = parse_date_format(df.date, params['format_date'], params['custom_format'])
+
+    try:
+        df.pressure = df.pressure.astype('float')
+        df.temperature = df.temperature.astype('float')
+    except Exception:
+        raise Exception('The selected pressure and/or temperature columns do not contain exclusively numerical data')
 
     if params['start_time'] == '' or params['start_time'] < df.date.iloc[0]:
         params['start_time'] = df.date.iloc[0].round('min')

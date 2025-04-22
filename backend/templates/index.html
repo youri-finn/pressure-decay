@@ -28,12 +28,14 @@
             <div class="form-row">
 
                 {% set simex_select = "selected" if params.format_date == "simex" else "" %}
+                {% set scada_select = "selected" if params.format_date == "scada" else "" %}
                 {% set xls_select = "selected" if params.format_date == "xls" else "" %}
                 {% set unix_select = "selected" if params.format_date == "unix" else "" %}
                 {% set custom_select = "selected" if params.format_date == "custom" else "" %}
 
             <select name="format_date" id="format_date" required oninput="document.getElementById('custom_format_container').style.display = (this.value === 'custom') ? 'block' : 'none'">
                 <option value="simex" {{ simex_select }}>simex</option>
+                <option value="scada" {{ scada_select }}>scada</option>
                 <option value="xls" {{ xls_select }}>xls</option>
                 <option value="unix" {{ unix_select }}>unix</option>
                 <option value="custom" {{ custom_select }}>custom</option>
