@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pressure Decay Tool - Instructions</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"/>
+</head>
+<body>
+
+    <h1>Instructions for Pressure Decay Test Tool</h1>
+
+    <p>This document serves as a guide on how to properly use the <strong>Pressure Decay Test Tool</strong> for analyzing pressure decay test data. The tool is still being developed, so it's important to upload clean and correctly formatted data.</p>
+
+    <p>The tool is available <a href="/" target="_blank">here</a>.</p>
+
+    <h2>Form Overview</h2>
+
+    <p>When opening the tool, you’ll see the following form:</p>
+    <img src="{{ url_for('static', filename='images/pressure_decay_test_tool_interface.png') }}" alt="form-interface" />
+
+    <ul>
+        <li><strong>System Name:</strong> A unique identifier for the system being tested.</li>
+        <li><strong>Header Row:</strong> The row number in your data file where the data header starts. This row may contain text, but the rows below must be numeric.</li>
+        <li><strong>Date:</strong> Column index number of the date and time data in your data file.</li>
+    </ul>
+
+    <h4>Date Format Options:</h4>
+    <ul>
+        <li><code>simex</code>: <code>19/02/2025 09:55:04</code></li>
+        <li><code>scada</code>: <code>2025/02/19 09:55:04.000</code></li>
+        <li><code>xls</code> (Excel date number): <code>45707.41</code></li>
+        <li><code>unix</code> (Unix timestamp): <code>1739955304</code></li>
+    </ul>
+
+    <p>You can also enter a custom date format like <code>%Y/%m/%d %H:%M:%S</code>. For example, if your data has the format <code>02-19-2025 09:55</code>, enter <code>%m-%d-%Y %H:%M</code>.</p>
+
+    <div class="note">
+        <em>Note:</em> Try the predefined formats (simex, scada) first. Use custom format only if those fail.
+    </div>
+
+    <ul>
+        <li><strong>Pressure:</strong> Column index for pressure values.
+            <br>Units: <em>bar (absolute or gauge), pascal, kilopascal, psi</em>
+        </li>
+        <li><strong>Temperature:</strong> Column index for temperature values.
+            <br>Units: <em>Celsius, Kelvin, Fahrenheit</em>
+        </li>
+        <li><strong>Volume or Mass:</strong> Either the system’s volume or gas mass inserted for the test.
+            <br>Units: <em>liter, cubic meter, gram, kilogram</em>
+        </li>
+        <li><strong>Test Medium:</strong> Gas used for pressure decay test. Options:
+            <ul>
+                <li>Carbon dioxide</li>
+                <li>Argon</li>
+                <li>Nitrogen</li>
+                <li>Forming gas (95% N<sub>2</sub>, 5% H<sub>2</sub>)</li>
+                <li>Air</li>
+                <li>Krypton</li>
+                <li>Ammonia</li>
+            </ul>
+        </li>
+        <li><strong>Analysis Start Time:</strong> Start of leak rate calculation. Should be after stabilization of pressure and temperature (typically 24 hours). If blank, defaults to first row of data.</li>
+        <li><strong>Analysis End Time:</strong> Optional. Tick the checkbox to specify a custom end time for the leak rate analysis. This will ignore the 24-hour cycle. If blank, defaults to last row of data.</li>
+        <li><strong>Data Upload:</strong> Upload your data file. Must be in <code>.csv</code> or <code>.xls/xlsx</code> format.</li>
+    </ul>
+
+    <p>Below you can see an example of an excel file and the corresponding input parameters:</p>
+    <img src="{{ url_for('static', filename='images/pressure_decay_test_tool_data.png') }}" alt="sample-data" />
+
+    <h2>Results Overview</h2>
+
+    <p>After submitting, you'll see a results section like this:</p>
+    <img src="{{ url_for('static', filename='images/pressure_decay_test_tool_results.png') }}" alt="tool-results" />
+
+    <p>The page shows five or six numerical results and four plots:</p>
+
+    <ul>
+        <li><strong>Leak Rates:</strong> Calculated via multiple methods:
+            <ul>
+                <li><strong>Mass-Density Method:</strong> Uses REFPROP software for density and leak rate calculation.</li>
+                <li><strong>Ideal Gas Law Method</strong> Uses the ideal gas law to estimate the density and leak rate calculation</li>
+                <li><strong>Bubble Diameter Rate:</strong> Leak rate expressed as an equivalent bubble diameter, released by a leak per second.</li>
+            </ul>
+        </li>
+        <li><strong>System Volume:</strong> If the total mass of the gas used for the leak test is entered, the calculated volume of the system will be displayed.</li>
+        <li><strong>Stabilization Time:</strong> Time taken between the start of the uploaded data and the selected start time.</li>
+        <li><strong>Total Leak Test Time:</strong> Time taken between the selected start time and the end time of the leak test.</li>
+        <li><strong>Plots Displayed:</strong>
+            <ul>
+                <li>Pressure divided by temperature over full time span of the uploaded data</li>
+                <li>Pressure divided by temperature over selected analysis period</li>
+                <li>Mass over time as calculated from REFPROP over selected analysis period</li>
+                <li>Raw pressure and temperature measurements over selected analysis period</li>
+            </ul>
+        </li>
+    </ul>
+
+    <p>All plots use time in hours. Unless a custom end time is entered, the leak rates are calculated over 24-hour intervals to reduce effects like day-night temperature fluctuations. The slope of the trendline is used to calculate the leak rate, and is also displayed on the plots.</p>
+
+    <img src="{{ url_for('static', filename='images/pressure_decay_test_tool_plots.png') }}" alt="tool-plots" style="width:100%; height:auto" />
+
+    <h2>Exporting Results</h2>
+    <p>You can click the <strong>Export</strong> button to download a Word report containing all figures, plots, and results.</p>
+
+    <hr>
+
+    <p>If you encounter issues or bugs, ensure your data is formatted clearly. <a href="mailto:youri.penders@cern.ch">Send a mail</a> for any requests on expanding the tool or for assistance if problems persist.</p>
+
+  <footer style="margin-top: 40px;">
+    <a href="/">← Back to Tool</a>
+  </footer>
+
+</body>
+</html>

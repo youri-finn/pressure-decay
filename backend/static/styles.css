@@ -1,19 +1,125 @@
-
-/* General Page Styling */
-body {
-    /*font-family: Verdana, sans-serif;*/
-    background: #f8f9fa;
-    color: #333;
-    margin: 0;
-    padding: 20px;
-    text-align: center;
+/* Reset and Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Header */
-h1, h2 {
-    color: #222;
-    /*font-weight: bold;*/
-    margin-bottom: 10px;
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: #333;
+  line-height: 1.6;
+  padding: 30px 20px;
+  max-width: 900px;
+  margin: auto;
+  text-align: left;
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+  color: #1a1a1a;
+  margin-top: 30px;
+  margin-bottom: 15px;
+}
+
+h1 {
+  font-size: 2em;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+h2 {
+  font-size: 1.5em;
+  border-bottom: 2px solid #ddd;
+  padding-bottom: 5px;
+}
+
+h4 {
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+/* Paragraphs */
+p {
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* Lists */
+ul {
+  margin-left: 20px;
+  margin-bottom: 20px;
+}
+
+ul li {
+  margin-bottom: 10px;
+}
+
+/* Code / Inline Code */
+code {
+  background-color: #f1f1f1;
+  font-family: Consolas, monospace;
+  font-size: 0.95em;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Notes */
+.note {
+  background-color: #fff3cd;
+  color: #856404;
+  border-left: 5px solid #ffeeba;
+  padding: 10px 15px;
+  margin: 20px 0;
+  border-radius: 4px;
+  font-size: 15px;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 20px auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.pressure-decay-plots {
+  width: 80vw;
+  max-width: none;
+  height: auto;
+  position: relative;
+  display: block;
+  margin: auto;
+  left: 50%;
+  transform: translateX(-50%)
+}
+
+/* Links */
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Horizontal Rule */
+hr {
+  margin: 40px 0;
+  border: none;
+  border-top: 1px solid #ccc;
 }
 
 /* Form Container */
@@ -22,8 +128,7 @@ form {
     padding: 25px;
     border-radius: 5px;
     border: 1px solid #ccc;
-    width: 100%;
-    max-width: 370px;
+    width: 60%;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -54,7 +159,6 @@ form {
 .form-row-top input {
     flex: 1 1 30%; /* Allow inputs to take up to 30% of the container */
     min-width: 50px; /* Ensure they are not too small */
-    max-width: 100px; /* Limit the max width of the inputs */
     padding: 10px;
     margin-bottom: 10px;
 }
@@ -67,6 +171,7 @@ form {
 label {
     /*font-weight: bold;*/
     font-size: 14px;
+    margin-bottom: -10px;
 }
 
 /* Input Fields */
@@ -114,29 +219,13 @@ button:hover {
     background: #5a6268; /* Darker grey */
 }
 
-/* Uploaded Data Display */
-p {
-    font-size: 16px;
-    font-weight: bold;
-}
-
-/* Image Styling */
-img {
-    border: 1px solid #ccc;
-    padding: 5px;
-    margin-top: 10px;
-    max-width: 100%;
-    height: auto;
-}
-
 /* Result Box Styling */
 .result-box {
     background: #e9ecef;
     padding: 25px;
     border-radius: 5px;
     border: 1px solid #ccc;
-    width: 100%;
-    max-width: 370px;
+    width: 60%;
     margin: 20px auto;
     text-align: left;
 }
@@ -145,4 +234,8 @@ img {
     margin: 5px 0; /* Reduces space between paragraphs */
 }
 
-*/
+/* Consistent size for datetime inputs */
+input[type="datetime-local"] {
+    width: 100%;
+    box-sizing: border-box;
+}
