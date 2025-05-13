@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pressure Decay Tool - Instructions</title>
+  <title>Pressure Decay Test Tool - Instructions</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"/>
 </head>
 <body>
@@ -96,7 +96,7 @@
         </li>
     </ul>
 
-    <p>All plots use time in hours. Unless a custom end time is entered, the leak rates are calculated over 24-hour intervals to reduce effects like day-night temperature fluctuations. The slope of the trendline is used to calculate the leak rate, and is also displayed on the plots.</p>
+    <p>All plots use time in hours. The thick dotted vertical lines indicate the start and end time for the leak rate analysis. Unless a custom end time is entered, the leak rates are calculated over 24-hour intervals to reduce effects like day-night temperature fluctuations. The slope of the trendline is used to calculate the leak rate, and is also displayed on the plots.</p>
 
     <img src="{{ url_for('static', filename='images/pressure_decay_test_tool_plots.png') }}" alt="tool-plots" style="width:100%; height:auto" />
 
