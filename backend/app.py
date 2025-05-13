@@ -4,10 +4,10 @@ import json
 from datetime import datetime
 import pandas as pd
 from flask import Flask, request, render_template, session, send_file
-from backend.utils.validation import file_validation, parameter_validation
-from backend.utils.analysis import data_processing, data_analysis
-from backend.utils.plot import plot_all, plot_individual
-from backend.utils.export import export_word
+from utils.validation import file_validation, parameter_validation
+from utils.analysis import data_processing, data_analysis
+from utils.plot import plot_all, plot_individual
+from utils.export import export_word
 
 app = Flask(__name__)
 app.secret_key = 'this_secret_key_is_secret'
