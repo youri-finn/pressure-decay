@@ -1,162 +1,120 @@
 import io
-
-from flask import Flask, request, render_template, session, send_file, url_for
+import tempfile
+import json
 from datetime import datetime
-from analysis import analyze_data, generate_plot
-from export import export_word
-import os
 import pandas as pd
+from flask import Flask, request, render_template, session, send_file
+from backend.utils.validation import file_validation, parameter_validation
+from backend.utils.analysis import data_processing, data_analysis
+from backend.utils.plot import plot_all, plot_individual
+from backend.utils.export import export_word
 
 app = Flask(__name__)
-app.secret_key = 'some_kind_of_secret_key'
-UPLOAD_FOLDER = 'tempfiles'
-ALLOWED_EXTENSIONS = ('csv', 'xls', 'xlsx')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.secret_key = 'this_secret_key_is_secret'
 
 
 @app.route('/')
 def index():
-    return render_template('index.html', file_name=None, params=None, output=None, errors=None)
+    return render_template('index.html', params=None, results=None, errors=None)
 
 
 @app.route('/analysis', methods=['POST'])
 def upload_file():
 
-    file = request.files['file']
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+    file = request.files.get('file')
+    raw_parameters = request.form.to_dict()
 
-    params = request.form.to_dict()
-    success, result = validate_inputs(file_path, params)
-
-    if success:
-        params = result
-    else:
-        return render_template('index.html', file_name=None, params=params, output=None, errors=result)
-
-    # df, output = analyze_data(file_path, params)
     try:
-        df, output = analyze_data(file_path, params)
-    except Exception as exp:
-        return render_template('general_error.html', file_name=None, params=params, output=None, errors=exp)
+        parameters = parameter_validation(raw_parameters)
+        data = file_validation(file, parameters)
+    except Exception as e:
+        return render_template('index.html', params=raw_parameters, results=None, errors=e)
 
-    df_csv_path = os.path.join(UPLOAD_FOLDER, 'df.csv')
-    df.to_csv(df_csv_path, index=False)
+    try:
+        data, parameters = data_processing(data, parameters)
+        data, results = data_analysis(data, parameters)
+    except Exception as e:
+        return render_template('general_error.html', params=parameters, results=None, errors=e)
 
-    session['file_path'] = file_path
-    session['params'] = request.form
-    session['df_path'] = df_csv_path
-    session['output'] = output
+    parameters = {key: value.isoformat() if isinstance(value, (datetime, pd.Timestamp)) else value
+                  for key, value in parameters.items()}
 
-    # print(params, output)
+    parameters_file = tempfile.NamedTemporaryFile(delete=False)
+    with open(parameters_file.name, 'w') as f:
+        json.dump(parameters, f)
 
-    return render_template('index.html', file_name=file_path, params=params, output=output)
+    results_file = tempfile.NamedTemporaryFile(delete=False)
+    with open(results_file.name, 'w') as f:
+        json.dump(results, f)
+
+    data_file = tempfile.NamedTemporaryFile(delete=False)
+    data.to_json(data_file.name)
+    data_file.close()
+
+    session['parameters'] = parameters_file.name
+    session['results'] = results_file.name
+    session['data'] = data_file.name
+
+    return render_template('index.html', params=parameters, results=results, errors=None)
+
+
+@app.route('/instructions')
+def show_instructions():
+    return render_template('instructions.html')
 
 
 @app.route('/plot')
 def get_plot():
 
-    # we can edit this only to use dataframe for the time axis (maybe not even)
-    df = pd.read_csv(session['df_path'])
-    # params = format_inputs(session['params'])
+    data = session.get('data')
+    results = session.get('results')
 
-    img = generate_plot(df)
+    if not data or not results:
+        return "missing files", 400
+
+    data = pd.read_json(data)
+    with open(results, 'r') as f:
+        results = json.load(f)
+
+    img = plot_all(data, results)
     return send_file(img, mimetype='image/png')
+
 
 @app.route('/export')
 def export_data():
 
-    params = session['params']
-    output = session['output']
+    data = session.get('data')
+    parameters = session.get('parameters')
+    results = session.get('results')
 
-    df = pd.read_csv(session['df_path'])
-    image = generate_plot(df)
-    doc = export_word(params, output, image)
+    if not data or not results:
+        return "missing files", 400
+
+    data = pd.read_json(data)
+
+    with open(parameters, 'r') as f:
+        parameters = json.load(f)
+
+    with open(results, 'r') as f:
+        results = json.load(f)
+
+    images = plot_individual(data, results)
+
+    try:
+        doc = export_word(parameters, results, images)
+    except Exception as e:
+        return render_template('general_error.html', params=parameters, results=None, errors=e)
 
     file = io.BytesIO()
     doc.save(file)
     file.seek(0)
 
     current_date = datetime.now().strftime('%Y%m%d')
-    file_name = current_date + '_pressure-decay-test_' + params['system_name'].replace(' ', '_') + '.docx'
+    file_name = current_date + '_pressure-decay-test_' + parameters['system_name'].replace(' ', '_') + '.docx'
 
-    return send_file(file, as_attachment=True, download_name=file_name, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-
-
-def validate_inputs(file_path, params):
-
-    # blanket error throw if parameters cannot be formatted
-    try:
-        params = format_inputs(params)
-    except Exception as exp:
-        return False, "input parameters are not correct: " + str(exp)
-
-    # check for correct extensions
-    if not file_path.endswith(ALLOWED_EXTENSIONS):
-        return False, "uploaded file type not allowed, only .csv, .xls and .xlsx are accepted"
-
-    # check if column numbers do not exceed total amount of columns available in the uploaded file
-    row_nums, col_nums = get_shape(file_path)
-    if max(params['col_date'], params['col_pressure'], params['col_temperature']) > col_nums:
-        return False, "column number must not exceed total available columns in file"
-
-    if params['start_row'] > row_nums:
-        return False, "starting row must not exceed total available rows in file"
-
-    # for now, volume cannot be zero or blank
-    if params['volume'] == 0:
-        return False, "volume/mass cannot be zero"
-
-    try:
-        # check if start time is not later than end time
-        if params['start_time'] > params['end_time']:
-            return False, "start time must begin before end time"
-        # check if total time is not lower than 24 hours
-        if (params['end_time'] - params['start_time']).total_seconds() < 24 * 3600:
-            return False, "the uploaded data must be at least 24 hours of data"
-    except TypeError:
-        print('A TypeError was thrown between comparing the start and end times, this will be caught in the analysis '
-              'part')
-
-    return True, params
-
-
-def format_inputs(params):
-
-    params['start_row'] = int(params['start_row'])
-    params['col_date'] = int(params['col_date'])
-    params['col_pressure'] = int(params['col_pressure'])
-    params['col_temperature'] = int(params['col_temperature'])
-
-    params['system_name'] = params['system_name'].strip()
-
-    if params['volume'] != '':
-        params['volume'] = float(params['volume'])
-    else:
-        params['volume'] = 0
-
-    if params['start_time'] != '':
-        params['start_time'] = datetime.strptime(params['start_time'], '%Y-%m-%dT%H:%M')
-
-    if params['end_time'] != '':
-        params['end_time'] = datetime.strptime(params['end_time'], '%Y-%m-%dT%H:%M')
-
-    return params
-
-
-def get_shape(file_path):
-
-    line = None
-
-    if file_path.endswith('csv'):
-        line = pd.read_csv(file_path)
-
-    elif file_path.endswith(('xls', 'xlsx')):
-        line = pd.read_excel(file_path)
-    # print(line.shape)
-    return line.shape
+    return send_file(file, as_attachment=True, download_name=file_name,
+                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
-    # app.run(debug=True)

@@ -8,17 +8,23 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Welcome to the Pressure Decay Test Upload & Analysis Site</h1>
-        <h2>Upload data!</h2>
+    <h2 style="text-align: center">Pressure Decay Test Analysis Tool</h2>
+
+        <p style="text-align: center; margin-top: 10px;">
+            Welcome to the pressure decay test analysis tool. Use this tool to upload pressure decay test data and automatically calculate and plot leak rates and system volumes. Click
+          <a href="/instructions" target="_blank">
+            here
+          </a> for detailed instructions.
+        </p>
 
         <form action="/analysis" method="POST" enctype="multipart/form-data">
-            <label> Enter system name:</label>
+            <label> System Name:</label>
             <input type="text" name="system_name" placeholder="system name" value="{{ params.system_name if params else '' }}" required>
 
-            <label> Enter header row in the uploaded data:</label>
+            <label> Header Row:</label>
             <input type="number" name="start_row" min="1" placeholder="row" value="{{ params.start_row if params else '' }}" required>
 
-            <label> Enter column numbers for 'date', 'pressure' and 'temperature' in the data file and their respective format and units:</label>
+            <label> Column numbers for 'date', 'pressure' and 'temperature' with format and units:</label>
             <div class="form-row-top">
             <input type="number" name="col_date" min="1" placeholder="date" value="{{ params.col_date if params else '' }}" required>
             <input type="number" name="col_pressure" min="1" placeholder="pressure" value="{{ params.col_pressure if params else '' }}" required>
@@ -72,9 +78,9 @@
                     value="{{ params.custom_format if params else '' }}">
             </div>
 
-            <label for="volume"> Enter either the system volume, or the amount of filled mass:<br> </label>
+            <label for="volume"> System Volume, or Filled Gas Amount:<br> </label>
             <div class="form-row-double">
-            <input type="number" id="volume" name="volume" step="0.001" min="0" placeholder="volume or mass" value="{{ params.volume if params else '' }}" >
+            <input type="number" id="volume" name="volume" step="0.001" min="0.001" placeholder="volume or mass" value="{{ params.volume if params else '' }}" >
 
                     {% set l_select = "selected" if params.unit_volume == "liter" else "" %}
                     {% set m3_select = "selected" if params.unit_volume == "m3" else "" %}
@@ -89,11 +95,11 @@
             </select>
             </div>
 
-            <label> Enter test medium:</label>
+            <label> Test Medium:</label>
 
             {% set co2_select = "selected" if params.medium == "CO2" else "" %}
             {% set argon_select = "selected" if params.medium == "argon" else "" %}
-            {% set forming_select = "selected" if params.medium == "forming" else "" %}
+            {% set forming_select = "selected" if params.medium == "forming gas" else "" %}
             {% set air_select = "selected" if params.medium == "air" else "" %}
             {% set nitrogen_select = "selected" if params.medium == "nitrogen" else "" %}
             {% set krypton_select = "selected" if params.medium == "krypton" else "" %}
@@ -104,7 +110,7 @@
             <select name="medium" required>
                 <option value="CO2" {{ co2_select }}>carbon dioxide</option>
                 <option value="argon" {{ argon_select }}>argon</option>
-                <option value="forming" {{ forming_select }}>forming gas (95/5)</option>
+                <option value="forming gas" {{ forming_select }}>forming gas (95% N2/5% H2)</option>
                 <option value="air" {{ air_select }}>air</option>
                 <option value="nitrogen" {{ nitrogen_select }}>nitrogen</option>
                 <option value="krypton" {{ krypton_select }}>krypton</option>
@@ -113,9 +119,17 @@
                 <!-- <option value="custom" {{ custom_select }}>custom</option> -->
             </select>
 
-            <label for="start_time">Enter the start and end time for leak rate analysis: <br> <small>(if you want to cut or shorten the uploaded data)</small></label>
+            <label for="start_time">Analysis Start Time: <small>(typically 24 hours after initial pressurisation)</small></label>
             <input type="datetime-local" id="start_time" name="start_time" value="{{ params.start_time if params else '' }}" >
-            <input type="datetime-local" id="end_time" name="end_time" value="{{ params.end_time if params else '' }}" >
+
+            <div id="end_time_container">
+            <input type="datetime-local" id="end_time" name="end_time" value="{{ params.end_time if params['periodic_limit_off'] else '' }}" >
+            </div>
+
+            <label class="inline-checkbox-label" for="periodic_limit_off">
+            <input type="checkbox" id="periodic_limit_off" name="periodic_limit_off" value="checked" {% if params and params.periodic_limit_off %}checked{% endif %}>
+            Select to set custom analysis end time
+            </label>
 
             <label for="file"> Submit data:</label>
             <input type="file" id="file" name="file" accept=".csv, .xls, .xlsx" required>
@@ -130,21 +144,25 @@
         </ul>
     {% endif %}
 
-    {% if output is not none %}
+    {% if results is not none %}
         <form action="\export" method="GET" class="result-box">
-            <p><strong> Leak Rate (mass-density) :</strong> {{ output[1] }} grams/year</p>
-            <p><strong> Leak Rate (ideal gas law) :</strong> {{ output[0] }} grams/year</p>
-            <p><strong> Bubble Diameter Rate:</strong> {{ output[2] }} mm/s</p>
-            {% if output[3] != '' %}
-                <p><strong> System Volume:</strong> {{ output[3] }} litre</p>
+            <p><strong> Leak Rate (mass-density) :</strong> {{ results['mass_rate'] }} grams/year</p>
+            <p><strong> Leak Rate (ideal gas law) :</strong> {{ results['ideal_gas_rate'] }} grams/year</p>
+            <p><strong> Bubble Diameter Rate:</strong> {{ results['bubble_rate'] }} mm/s</p>
+            {% if results['measured_volume'] is not none %}
+                <p><strong> System Volume:</strong> {{ results['measured_volume'] }} litre</p>
             {% endif %}
+            <p><strong> Stabilization Time:</strong> {{ results['stabilization_time'] }} hours</p>
+            <p><strong> Total Leak Test Time:</strong> {{ results['total_test_time'] }} hours</p>
             <button type="submit">Export!</button>
             </form>
 
 
 
-        <h3>Pressure Decay Plots</h3>
+        <h3 style="text-align: center;">Pressure Decay Plots </h3>
+    <div class="pressure-decay-plots">
         <img src="{{ url_for('get_plot') }}" alt="Pressure Decay Plot">
+    </div>
     {% endif %}
 
     <script>
@@ -158,6 +176,22 @@
     document.getElementById("format_date").addEventListener("input", toggleCustomField);
     </script>
 
-    <p><small>Made by Youri Penders & Krzysztof Sliwa for the EP-DT-FS Group at CERN</small></p>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var checkbox = document.getElementById("periodic_limit_off");
+        var endTimeContainer = document.getElementById("end_time_container");
+
+        function toggleEndTime() {
+            endTimeContainer.style.display = checkbox.checked ? "block" : "none";
+        }
+
+        checkbox.addEventListener("change", toggleEndTime);
+        toggleEndTime(); // initial state on load
+    });
+    </script>
+
+    <footer>
+    <small>Made by the EP-DT-FS section at CERN. <a href="mailto:youri.penders@cern.ch">Contact</a> for inquiries or bugs.</small>
+    </footer>
 </body>
 </html>

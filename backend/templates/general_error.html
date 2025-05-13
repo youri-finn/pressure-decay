@@ -8,12 +8,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Welcome to the Pressure Decay Test Upload Site</h1>
-
-    <h2>Upload a file!</h2>
+    <h2 style="text-align: center">Pressure Decay Test Analysis Tool</h2>
 
     <p>Sorry, some general error has been produced, which has not been fixed yet. The error message is:</p>
-    <p style="color: red;">{{ errors }}</p>
-    <p>Please send a message to youri.penders@cern.ch to see if we can get it fixed!</p>
+    <p style="color: red;">- {{ errors }}</p>
+    <p>Please send a message to <a href="mailto:youri.penders@cern.ch">youri.penders@cern.ch</a> to see if we can get it fixed!</p>
+
+    <footer>
+    <small>Made by the EP-DT-FS section at CERN. <a href="mailto:youri.penders@cern.ch">Contact</a> for inquiries or bugs.</small>
+    </footer>
 </body>
 </html>
