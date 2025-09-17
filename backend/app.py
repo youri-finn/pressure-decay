@@ -1,4 +1,5 @@
 import io
+import os
 import tempfile
 import json
 from datetime import datetime
@@ -47,13 +48,13 @@ def upload_file():
     with open(results_file.name, 'w') as f:
         json.dump(results, f)
 
-    data_file = tempfile.NamedTemporaryFile(delete=False)
+    data_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
     data.to_json(data_file.name)
     data_file.close()
 
     session['parameters'] = parameters_file.name
     session['results'] = results_file.name
-    session['data'] = data_file.name
+    session['data_path'] = data_file.name
 
     return render_template('index.html', params=parameters, results=results, errors=None)
 
@@ -66,7 +67,7 @@ def show_instructions():
 @app.route('/plot')
 def get_plot():
 
-    data = session.get('data')
+    data = session.get('data_path')
     results = session.get('results')
 
     if not data or not results:
@@ -83,20 +84,23 @@ def get_plot():
 @app.route('/export')
 def export_data():
 
-    data = session.get('data')
+    data_path = session.get('data_path')
     parameters = session.get('parameters')
     results = session.get('results')
 
-    if not data or not results:
+    if not data_path or not results:
         return "missing files", 400
-
-    data = pd.read_json(data)
 
     with open(parameters, 'r') as f:
         parameters = json.load(f)
 
     with open(results, 'r') as f:
         results = json.load(f)
+
+    try:
+        data = pd.read_json(data_path)
+    except (ValueError, FileNotFoundError):
+        return render_template('index.html', params=parameters, results=None, errors='data file cannot be read. data has either been deleted or is not present (data will automatically delete after export)')
 
     images = plot_individual(data, results)
 
@@ -112,9 +116,12 @@ def export_data():
     current_date = datetime.now().strftime('%Y%m%d')
     file_name = current_date + '_pressure-decay-test_' + parameters['system_name'].replace(' ', '_') + '.docx'
 
+    os.remove(data_path)
+
     return send_file(file, as_attachment=True, download_name=file_name,
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
+    # app.run(debug=True)

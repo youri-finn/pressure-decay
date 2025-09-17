@@ -118,7 +118,7 @@ def plot_pressure_and_temperature(axis, data, results):
     handles, labels = axis.get_legend_handles_labels()
     handles_twin, labels_twin = twin_axis.get_legend_handles_labels()
 
-    twin_axis.legend(handles + handles_twin, labels + labels_twin, frameon=True)
+    twin_axis.legend(handles + handles_twin, labels + labels_twin, frameon=True, loc='best')
 
 
 def plot_mass(axis, data, results):
