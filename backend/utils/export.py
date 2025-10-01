@@ -2,11 +2,15 @@ from docx import Document
 from datetime import datetime, timedelta
 import os
 
+APP_ENV = os.getenv('APP_ENV', 'local')
+
 
 def export_word(parameters, results, images):
 
-    template_path = '/opt/app-root/src/backend/assets/report_template.docx'
-    # template_path = 'assets/report_template.docx'
+    if APP_ENV == 'local':
+        template_path = 'assets/report_template.docx'
+    else:
+        template_path = '/opt/app-root/src/backend/assets/report_template.docx'
 
     if os.path.exists(template_path):
         doc = Document(template_path)

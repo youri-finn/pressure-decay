@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 import pandas as pd
 from flask import Flask, request, render_template, session, send_file
+from apscheduler.schedulers.background import BackgroundScheduler
 from utils.validation import file_validation, parameter_validation
 from utils.analysis import data_processing, data_analysis
 from utils.plot import plot_all, plot_individual
@@ -12,6 +13,28 @@ from utils.export import export_word
 
 app = Flask(__name__)
 app.secret_key = 'this_secret_key_is_secret'
+
+APP_ENV = os.getenv('APP_ENV', 'local')
+
+if APP_ENV == 'local':
+    TEMP_DIR = 'tmp'
+else:
+    TEMP_DIR = os.path.join('backend', 'tmp')
+
+
+def cleanup_files():
+    for filename in os.listdir(TEMP_DIR):
+        filepath = os.path.join(TEMP_DIR, filename)
+
+        try:
+            os.remove(filepath)
+        except Exception:
+            continue
+
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=cleanup_files, trigger='cron', hour=3, minute=0)
+scheduler.start()
 
 
 @app.route('/')
@@ -40,21 +63,17 @@ def upload_file():
     parameters = {key: value.isoformat() if isinstance(value, (datetime, pd.Timestamp)) else value
                   for key, value in parameters.items()}
 
-    parameters_file = tempfile.NamedTemporaryFile(delete=False)
-    with open(parameters_file.name, 'w') as f:
-        json.dump(parameters, f)
+    with tempfile.NamedTemporaryFile(delete=False, dir='tmp', mode='w') as file:
+        json.dump(parameters, file)
+        session['parameters'] = file.name
 
-    results_file = tempfile.NamedTemporaryFile(delete=False)
-    with open(results_file.name, 'w') as f:
-        json.dump(results, f)
+    with tempfile.NamedTemporaryFile(delete=False, dir='tmp', mode='w') as file:
+        json.dump(results, file)
+        session['results'] = file.name
 
-    data_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
-    data.to_json(data_file.name)
-    data_file.close()
-
-    session['parameters'] = parameters_file.name
-    session['results'] = results_file.name
-    session['data_path'] = data_file.name
+    with tempfile.NamedTemporaryFile(delete=False, dir='tmp', mode='w') as file:
+        file.write(data.to_json())
+        session['data_path'] = file.name
 
     return render_template('index.html', params=parameters, results=results, errors=None)
 
@@ -74,8 +93,8 @@ def get_plot():
         return "missing files", 400
 
     data = pd.read_json(data)
-    with open(results, 'r') as f:
-        results = json.load(f)
+    with open(results, 'r') as file:
+        results = json.load(file)
 
     img = plot_all(data, results)
     return send_file(img, mimetype='image/png')
@@ -91,11 +110,11 @@ def export_data():
     if not data_path or not results:
         return "missing files", 400
 
-    with open(parameters, 'r') as f:
-        parameters = json.load(f)
+    with open(parameters, 'r') as file:
+        parameters = json.load(file)
 
-    with open(results, 'r') as f:
-        results = json.load(f)
+    with open(results, 'r') as file:
+        results = json.load(file)
 
     try:
         data = pd.read_json(data_path)
@@ -123,5 +142,7 @@ def export_data():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
-    # app.run(debug=True)
+    if APP_ENV == 'local':
+        app.run(debug=True)
+    else:
+        app.run(host="0.0.0.0", port=8080)
