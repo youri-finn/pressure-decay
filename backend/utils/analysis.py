@@ -163,4 +163,4 @@ def calculate_mass_rate(slope):
 
 
 def calculate_bubble_rate(slope, density):
-    return round((-slope * 6 / 3600 / np.pi / density)**(1/3) * 1000, 1)
+    return -1 * np.sign(slope) * round((abs(slope) * 6 / 3600 / np.pi / density)**(1/3) * 1000, 1)
