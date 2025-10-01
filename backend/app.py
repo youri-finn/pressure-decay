@@ -63,15 +63,15 @@ def upload_file():
     parameters = {key: value.isoformat() if isinstance(value, (datetime, pd.Timestamp)) else value
                   for key, value in parameters.items()}
 
-    with tempfile.NamedTemporaryFile(delete=False, dir='tmp', mode='w') as file:
+    with tempfile.NamedTemporaryFile(delete=False, dir=TEMP_DIR, mode='w') as file:
         json.dump(parameters, file)
         session['parameters'] = file.name
 
-    with tempfile.NamedTemporaryFile(delete=False, dir='tmp', mode='w') as file:
+    with tempfile.NamedTemporaryFile(delete=False, dir=TEMP_DIR, mode='w') as file:
         json.dump(results, file)
         session['results'] = file.name
 
-    with tempfile.NamedTemporaryFile(delete=False, dir='tmp', mode='w') as file:
+    with tempfile.NamedTemporaryFile(delete=False, dir=TEMP_DIR, mode='w') as file:
         file.write(data.to_json())
         session['data_path'] = file.name
 
@@ -119,7 +119,9 @@ def export_data():
     try:
         data = pd.read_json(data_path)
     except (ValueError, FileNotFoundError):
-        return render_template('index.html', params=parameters, results=None, errors='data file cannot be read. data has either been deleted or is not present (data will automatically delete after export)')
+        return render_template('index.html', params=parameters, results=None,
+                               errors='data file cannot be read. data has either been deleted or is not present '
+                                      '(data will automatically delete after export)')
 
     images = plot_individual(data, results)
 
