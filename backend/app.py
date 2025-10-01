@@ -22,7 +22,7 @@ else:
     TEMP_DIR = os.path.join('backend', 'tmp')
 
 app.logger.info(f' APP_ENV={APP_ENV}, TEMP_DIR={TEMP_DIR}')
-
+print(f' APP_ENV={APP_ENV}, TEMP_DIR={TEMP_DIR}')
 
 def cleanup_files():
     for filename in os.listdir(TEMP_DIR):
