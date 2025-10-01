@@ -21,6 +21,7 @@ if APP_ENV == 'local':
 else:
     TEMP_DIR = os.path.join('backend', 'tmp')
 
+print(APP_ENV, TEMP_DIR)
 
 def cleanup_files():
     for filename in os.listdir(TEMP_DIR):
